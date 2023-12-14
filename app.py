@@ -54,7 +54,7 @@ def welcome():
     )
 
 @app.route("/api/v1.0/precipitation")
-def precip():
+def precipitation():
     # Create our session (link) from Python to the DB
     session = Session(engine)
 
@@ -69,14 +69,14 @@ def precip():
     # Perform a query to retrieve the data and precipitation scores
     sel = [measurements.date,measurements.prcp]
 
-    year_results = session.query(*sel).filter(measurements.date >= rec_twelve_months).all()
+    year_results = session.query(*sel).filter(measurements.date >= rec_twelve_months).filter(measurements.station == 'USC00519281').all()
     
     session.close()
 
     # Convert list of tuples into normal list
-    year_results_list = list(np.ravel(year_results))
-
-    return jsonify(year_results_list)
+    # Dict with date as the key and prcp as the value
+    precip = {date: prcp for date, prcp in year_results}
+    return jsonify(precip)
 
 @app.route("/api/v1.0/stations")
 def stations():
@@ -111,7 +111,7 @@ def temps():
     
     # Using the most active station id
     # Query the last 12 months of temperature observation data for this station and plot the results as a histogram
-    temp_results = session.query(measurements.tobs).filter(measurements.date >= rec_twelve_months).\
+    temp_results = session.query(measurements.date,measurements.tobs).filter(measurements.date >= rec_twelve_months).\
                filter(measurements.station == 'USC00519281').all()
 
     #end session
@@ -128,9 +128,8 @@ def temp_data_start_date(start):
     """Fetch dates and temperature observations from variable start date"""
 
     # Perform a query to retrieve the data and precipitation scores
-    sel = [measurements.date,measurements.prcp]
-
-    start_date_results = session.query(*sel).filter(measurements.date >= start).all()
+    sel_stats = [func.min(measurements.tobs),func.max(measurements.tobs),func.avg(measurements.tobs)]
+    start_date_results = session.query(*sel_stats).filter(measurements.date >= start).all()
 
     session.close()
 
@@ -144,9 +143,9 @@ def temp_data_start_end_date(start,end):
     """Fetch dates and temperature observations from variable start date and end date"""
 
     # Perform a query to retrieve the data and precipitation scores
-    sel = [measurements.date,measurements.prcp]
+    sel_stats = [func.min(measurements.tobs),func.max(measurements.tobs),func.avg(measurements.tobs)]
 
-    start_date_results = session.query(*sel).filter(measurements.date >= start).filter(measurements.date <= end).all()
+    start_date_results = session.query(*sel_stats).filter(measurements.date >= start).filter(measurements.date <= end).all()
 
     session.close()
 
